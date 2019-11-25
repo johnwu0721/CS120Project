@@ -13,7 +13,7 @@
 #endif
 
 char Rows = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80}
-char Cols = {
+char Cols = {0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xDF, 0xBF, 0x7F}
 
 int main(void) {
     /* Insert DDR and PORT initializations */
@@ -21,7 +21,8 @@ int main(void) {
     DDRC = 0x00; PORTC = 0xFF;
     /* Insert your solution below */
     while (1) {
-       PORTA = 
+       PORTA = Rows[0] | Rows[1];
+       PORTC = Cols[0] & Cols[1];
     }
     return 1;
 }
