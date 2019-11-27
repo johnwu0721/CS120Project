@@ -10,7 +10,7 @@
 #include <avr/io.h>
 #ifdef _SIMULATE_
 #include "simAVRHeader.h"
-#include <avr/epprom.h"
+#include <avr/epprom.h>
 #include "io.h"
 #endif
 
@@ -51,5 +51,6 @@ int main(void) {
        PORTA = Rows[0] | Rows[1];
        PORTC = Cols[0] & Cols[1];
     }
-    return 1;
+
+    return 0;
 }
