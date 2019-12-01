@@ -78,3 +78,14 @@ void delay_ms(int miliSec) //for 8 Mhz crystal
    asm("nop");
   }
 }
+
+void LCD_createChar(unsigned char index, unsigned char *pointer) {
+   unsigned char i;
+   if (index < 8) {
+      LCD_WriteCommand(0x40 + index * 8);
+      for (i = 0, i < 8, i++) {
+         LCD_WriteData(pointer[i]);
+      }
+   }
+   LCD_WriteCommand(0x80);
+}
