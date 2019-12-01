@@ -19,11 +19,11 @@
 #define up (~PINB & 0x08)    // up button
 #define left (~PINB & 0x10)  // left button
 #define down (~PINB & 0x20)  // down button
-#define right (~PINB & 0x40) // right button
-
+#define right (~PINB & 0x04) // right button
+#define speaker (PINB & 0x40) // speaker
 
 unsigned char gameStatus = 0; // game status
-unsigned char highScore = 0;
+uint8_t highScore;
 double frequency = 0.00; 
 short score = 0; //score of the game
 
@@ -79,7 +79,7 @@ int displayHighScore(int score) {
 }
 
 void displayLED() { //arrows for the game
-  
+     
 
 }
 
@@ -124,6 +124,7 @@ int main(void) {
     
     TimerOn();
     TimerSet(100);
+    PWM_on();
 
     while (1) {
        PORTA = Rows[0] | Rows[1];
