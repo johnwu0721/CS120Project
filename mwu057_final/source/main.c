@@ -35,6 +35,7 @@ char Rows[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80}; // LED Matrix
 char Cols[] = {0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xDF, 0xBF, 0x7F}; // LED Matrix
 
 enum MENU_STATES { WAIT, START, END, BUTPRESS, RESET } m_state ;
+enum LED_STATES { INIT, 1, 2, 3, 4, FIN };
 
 void menu_tick() {
    switch(m_state) { //transitions
@@ -111,7 +112,24 @@ void menu_tick() {
 void startGame() { //starting message
    LCD_init();
    LCD_ClearScreen();
-   LCD_DisplayString(1, "press up to start");
+   LCD_DisplayString(1, "up to start");
+   LCD_Cursor(21);
+   LCD_createChar(0, p1);
+   LCD_createChar(1, p2);
+   LCD_createChar(2, p3);
+   LCD_createChar(3, p4);
+   LCD_createChar(4, p5);
+   LCD_createChar(5, p3);
+   LCD_createChar(6, p2);
+   LCD_createCHar(7, p6);
+   LCD_WriteData(0x00);
+   LCD_WriteData(0x01);
+   LCD_WriteData(0x02);
+   LCD_WriteData(0x04);
+   LCD_WriteData(0x08);
+   LCD_WriteData(0x10);
+   LCD_WriteData(0x20);
+   LCD_WriteData(0x40);
    return;
 }
 
@@ -133,7 +151,83 @@ int displayHighScore(int score) {
    LCD_WriteData(highScore); //LCD_WriteData
    return score;
 }
+//enum LED_STATES = { INIT, 1, 2, 3, 4, FIN };
 
+int led_tick(int state) {
+   unsigned char rand = 0;
+   switch(state) { //led transitions
+      case INIT:
+         rand = genRandom();
+         if (gameStatus != 1) {
+            state = rand;
+         }
+         else {
+            state = FIN;
+         }
+         break;
+      case 1:      //up
+         state = INIT;
+         break;
+      case 2:      //down
+         state = INIT;
+         break;
+      case 3:      //left
+         state = INIT;
+         break;
+      case 4:      //right
+         state = INIT;
+         break;
+      case FIN:
+         if (gameStatus == 0) {
+            state = INIT;
+         }
+         else {
+            state = FIN;
+         }
+         break;
+      default:
+         state = INIT;
+         break;
+   }
+   switch(state) {
+      case INIT:
+         break;
+      case 1: //up
+         PORTA = Rows[0] | Rows[1] | Rows[2] | Rows[3] | Rows[4] | Rows[5] | Rows[6] | Rows[7];
+         PORTC = Cols[6] & Cols[7];
+         if (up) {
+            updateScore(score);
+         break;
+      case 2: //down
+         PORTA = Rows[0] | Rows[1] | Rows[2] | Rows[3] | Rows[4] | Rows[5] | Rows[6] | Rows[7];
+         PORTC = Cols[0] & Cols[1];
+         if (down) {
+            updateScore(score);
+         } 
+         break;
+      case 3: //left
+         PORTA = Rows[0] | Rows[1];
+         PORTC = Cols[0] & Cols[1] & Cols[2] & Cols[3] & Cols[4] & Cols[5] & Cols[6] & Cols[7];
+         if (left) {
+            updateScore(score);
+         {
+         break;
+      case 4: //right
+         PORTA = Rows[6] | Rows[7];
+         PORTC = Cols[0] & Cols[1] & Cols[2] & Cols[3] & Cols[4] & Cols[5] & Cols[6] & Cols[7];
+         if (right) {
+            updateScore(score);
+         }
+         break;
+      case FIN:
+         displayHighScore(score);
+         break;
+      default:
+         break;
+   }
+}
+
+/*
 int displayLED(int score) { //arrows for the game
    unsigned char rand = 0;
    _delay_us(500);
@@ -166,7 +260,7 @@ int displayLED(int score) { //arrows for the game
    }
    return score;
 }
-
+*/
 int updateScore(int score) {
    score = score + 1;
    return score;
@@ -220,9 +314,9 @@ int main(void) {
     //startGame();
     m_state = WAIT;
 
-    while (1) {
-       
+    while (1) {       
        menu_tick();
+       led_tick();
        while (!TimerFlag) {
           TimerFlag = 0;
        }
