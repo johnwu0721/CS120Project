@@ -1,20 +1,10 @@
-#ifndef __functions.h__
-#define __functions.h__
+#ifndef __functions_h__
+#define __functions_h__
 
 void startGame();
 int displayHighScore(int score);
 void displayLED();
-
-unsigned char player1[8] = {
-   0x0A,
-   0x04,
-   0x0A,
-   0x1F,
-   0x0E,
-   0x04,
-   0x0A,
-   0x11,
-}; 
-
-
+int displayScore(int score);
+int genRandom();
+int updateScore(int score)
 #endif
