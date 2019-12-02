@@ -35,7 +35,7 @@ char Rows[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80}; // LED Matrix
 char Cols[] = {0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xDF, 0xBF, 0x7F}; // LED Matrix
 
 enum MENU_STATES { WAIT, START, END, BUTPRESS, RESET } m_state ;
-enum LED_STATES { INIT, 1, 2, 3, 4, FIN };
+enum LED_STATES { WAITBUT,RELBUT, INIT, ONE, TWO, THREE, FOUR, FIN } state;
 
 void menu_tick() {
    switch(m_state) { //transitions
@@ -54,6 +54,7 @@ void menu_tick() {
          else {
             m_state = WAIT;
          }
+         break;
       case START:
          if (up && down && left && right) { //reset
             m_state = RESET;
@@ -93,7 +94,7 @@ void menu_tick() {
          break;
       case START:
          gameStatus = 0;
-         displayLED(score);
+         //displayLED(score);
          displayScore(score);
          break;
       case END:
@@ -101,8 +102,6 @@ void menu_tick() {
          break;
       case RESET:
          startGame();
-         PORTA = 0x00;
-         PORTC = 0x00;
          break;
       default:
          break;
@@ -113,6 +112,7 @@ void startGame() { //starting message
    LCD_init();
    LCD_ClearScreen();
    LCD_DisplayString(1, "up to start");
+   /*
    LCD_Cursor(21);
    LCD_createChar(0, p1);
    LCD_createChar(1, p2);
@@ -121,7 +121,7 @@ void startGame() { //starting message
    LCD_createChar(4, p5);
    LCD_createChar(5, p3);
    LCD_createChar(6, p2);
-   LCD_createCHar(7, p6);
+   LCD_createChar(7, p6);
    LCD_WriteData(0x00);
    LCD_WriteData(0x01);
    LCD_WriteData(0x02);
@@ -130,6 +130,7 @@ void startGame() { //starting message
    LCD_WriteData(0x10);
    LCD_WriteData(0x20);
    LCD_WriteData(0x40);
+   */
    return;
 }
 
@@ -151,31 +152,67 @@ int displayHighScore(int score) {
    LCD_WriteData(highScore); //LCD_WriteData
    return score;
 }
-//enum LED_STATES = { INIT, 1, 2, 3, 4, FIN };
+//enum LED_STATES = { WAITBUT, INIT, 1, 2, 3, 4, FIN };
 
-int led_tick(int state) {
-   unsigned char rand = 0;
+void led_tick(int state) {
+   unsigned char random = 0;
    switch(state) { //led transitions
-      case INIT:
-         rand = genRandom();
-         if (gameStatus != 1) {
-            state = rand;
+      case WAITBUT:
+         if (up && !down && !right && !left) {
+            state = RELBUT;
          }
          else {
-            state = FIN;
+            state = WAITBUT;
          }
          break;
-      case 1:      //up
-         state = INIT;
+      case RELBUT:
+         if(!up) {
+            state = INIT;
+         }
+         else {
+            state = WAITBUT;
+         }
          break;
-      case 2:      //down
-         state = INIT;
+      case INIT:
+         random = genRandom();
+         if (gameStatus == 1) {
+            state = FIN;
+         }
+         else {
+            state = random;
+         }
          break;
-      case 3:      //left
-         state = INIT;
+      case ONE:      //up
+         if (up && down && right && left) {
+            state = WAITBUT;
+         }
+         else {
+            state = INIT;
+         }
          break;
-      case 4:      //right
-         state = INIT;
+      case TWO:      //down
+         if (up && down && left && right) {
+            state = WAITBUT;
+         }
+         else {
+            state = INIT;
+         }
+         break;
+      case THREE:      //left
+         if (up && down && left && right) {
+            state = WAITBUT;
+         }
+         else {
+            state = INIT;
+         }
+         break;
+      case FOUR:      //right
+         if (up && down && left && right) {
+            state = WAITBUT;
+         }
+         else {
+            state = INIT;
+         }
          break;
       case FIN:
          if (gameStatus == 0) {
@@ -186,33 +223,40 @@ int led_tick(int state) {
          }
          break;
       default:
-         state = INIT;
+         state = WAITBUT;
          break;
    }
    switch(state) {
+      case WAITBUT:
+         PORTA = 0x00;
+         PORTC = 0x00;
+         break;
+      case RELBUT:
+         break;
       case INIT:
          break;
-      case 1: //up
+      case ONE: //up
          PORTA = Rows[0] | Rows[1] | Rows[2] | Rows[3] | Rows[4] | Rows[5] | Rows[6] | Rows[7];
          PORTC = Cols[6] & Cols[7];
          if (up) {
             updateScore(score);
+         }
          break;
-      case 2: //down
+      case TWO: //down
          PORTA = Rows[0] | Rows[1] | Rows[2] | Rows[3] | Rows[4] | Rows[5] | Rows[6] | Rows[7];
          PORTC = Cols[0] & Cols[1];
          if (down) {
             updateScore(score);
          } 
          break;
-      case 3: //left
+      case THREE: //left
          PORTA = Rows[0] | Rows[1];
          PORTC = Cols[0] & Cols[1] & Cols[2] & Cols[3] & Cols[4] & Cols[5] & Cols[6] & Cols[7];
          if (left) {
             updateScore(score);
-         {
+         }
          break;
-      case 4: //right
+      case FOUR: //right
          PORTA = Rows[6] | Rows[7];
          PORTC = Cols[0] & Cols[1] & Cols[2] & Cols[3] & Cols[4] & Cols[5] & Cols[6] & Cols[7];
          if (right) {
@@ -227,40 +271,6 @@ int led_tick(int state) {
    }
 }
 
-/*
-int displayLED(int score) { //arrows for the game
-   unsigned char rand = 0;
-   _delay_us(500);
-   rand = 1;
-   if (rand == 1) { //up
-      PORTA = Rows[0] | Rows[1] | Rows[2] | Rows[3] | Rows[4] | Rows[5] | Rows[6] | Rows[7];
-      PORTC = Cols[6] & Cols[7];
-      updateScore(score);
-   }
-   else if (rand == 2) { //down
-      PORTA = Rows[0] | Rows[1] | Rows[2] | Rows[3] | Rows[4] | Rows[5] | Rows[6] | Rows[7];
-      PORTC = Cols[0] & Cols[1];
-      if (rand == 2 && down) {
-         updateScore(score);
-      }
-   }
-   else if (rand == 3) { //left
-      PORTA = Rows[0] | Rows[1];
-      PORTC = Cols[0] & Cols[1] & Cols[2] & Cols[3] & Cols[4] & Cols[5] & Cols[6] & Cols[7];
-      if (rand == 3 && left) {
-         updateScore(score);
-      }
-   }
-   else if (rand == 4) { //right
-      PORTA = Rows[6] | Rows[7];
-      PORTC = Cols[0] & Cols[1] & Cols[2] & Cols[3] & Cols[4] & Cols[5] & Cols[6] & Cols[7];
-      if (rand == 4 && right) {
-         updateScore(score);
-      }
-   }
-   return score;
-}
-*/
 int updateScore(int score) {
    score = score + 1;
    return score;
@@ -268,30 +278,6 @@ int updateScore(int score) {
 
 int genRandom() {
    return (rand() % 4) + 1;
-}
-
-void set_PWM(double frequency) {
-   static double current_frequency;
-   if (frequency != current_frequency) {
-      if(!frequency) {TCCR3B &= 0x08; }
-      else { TCCR3B |= 0x03; }
-      if (frequency < 0.954) {OCR3A = 0xFFFF; }
-      else if (frequency > 31250) {OCR3A = 0x0000; }
-      else {OCR3A = (short)(8000000/ (128 * frequency)) - 1;}
-      TCNT3 = 0;
-      current_frequency = frequency;
-   }
-}
-
-void PWM_on() {
-   TCCR3A = (1 << COM3A0);
-   TCCR3B = (1 << WGM32) | (1 < CS31) | (1 < CS30);
-   set_PWM(0);
-}
-
-void PWM_off() {
-   TCCR3A = 0x00;
-   TCCR3B = 0x00;
 }
 
 
@@ -303,20 +289,42 @@ int main(void) {
     DDRC = 0xFF; PORTC = 0x00; // LED Matrix Cols
     DDRB = 0x43; PORTB = 0x9C; // Output: LCD, speaker Input: buttons
     DDRD = 0xFF; PORTD = 0x00; // LCD control lines
-    
+    /* 
     static _task task1, task2;
     _task *tasks[] = { &task1, &task2 };
     const unsigned short numTasks = sizeof(tasks)/ sizeof(task*);
-
+    */
     TimerOn();
     TimerSet(1000);
-    PWM_on();
     //startGame();
-    m_state = WAIT;
-
+    //m_state = WAIT;
+    //state = WAITBUT;
+    LCD_Cursor(21);
+    LCD_createChar(0,player1);
+    LCD_WriteData(0x00);
+   /* LCD_createChar(0, p1);
+    LCD_createChar(1, p2);
+    LCD_createChar(2, p3);
+    LCD_createChar(3, p4);
+    LCD_createChar(4, p5);
+    LCD_createChar(5, p3);
+    LCD_createChar(6, p2);
+    LCD_createChar(7, p6);
+    LCD_WriteData(0x00);
+    LCD_WriteData(0x01);
+    LCD_WriteData(0x02);
+    LCD_WriteData(0x04);
+    LCD_WriteData(0x08);
+    LCD_WriteData(0x10);
+    LCD_WriteData(0x20);
+    LCD_WriteData(0x40);
+   */
     while (1) {       
-       menu_tick();
-       led_tick();
+       //menu_tick(m_state);
+       //led_tick(state);
+       LCD_Cursor(21);
+       LCD_createChar(0,player1);
+       LCD_WriteData(0x00);
        while (!TimerFlag) {
           TimerFlag = 0;
        }
