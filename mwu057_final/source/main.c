@@ -14,8 +14,10 @@
 #include "io.c"
 #include "functions.h"
 #include <avr/interrupt.h>
-//#include <stdlib.h>
+#include <stdlib.h>
 #include "timer.h"
+#include "scheduler.h"
+#include <util/delay.h>
 #endif
 
 #define up (~PINB & 0x08)    // up button
@@ -29,8 +31,8 @@ uint8_t highScore;
 double frequency = 0.00; 
 int score = 0; //score of the game
 
-char Rows[8] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80}; // LED Matrix
-char Cols[8] = {0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xDF, 0xBF, 0x7F}; // LED Matrix
+char Rows[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80}; // LED Matrix
+char Cols[] = {0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xDF, 0xBF, 0x7F}; // LED Matrix
 
 enum MENU_STATES { WAIT, START, END, BUTPRESS, RESET } m_state ;
 
@@ -90,8 +92,8 @@ void menu_tick() {
          break;
       case START:
          gameStatus = 0;
-         displayScore(score); 
-         displayLED();
+         displayLED(score);
+         displayScore(score);
          break;
       case END:
          displayHighScore(highScore);
@@ -132,42 +134,41 @@ int displayHighScore(int score) {
    return score;
 }
 
-void displayLED() { //arrows for the game
+int displayLED(int score) { //arrows for the game
    unsigned char rand = 0;
-   rand = genRandom();
+   _delay_us(500);
+   rand = 1;
    if (rand == 1) { //up
       PORTA = Rows[0] | Rows[1] | Rows[2] | Rows[3] | Rows[4] | Rows[5] | Rows[6] | Rows[7];
       PORTC = Cols[6] & Cols[7];
+      updateScore(score);
    }
    else if (rand == 2) { //down
       PORTA = Rows[0] | Rows[1] | Rows[2] | Rows[3] | Rows[4] | Rows[5] | Rows[6] | Rows[7];
       PORTC = Cols[0] & Cols[1];
+      if (rand == 2 && down) {
+         updateScore(score);
+      }
    }
    else if (rand == 3) { //left
       PORTA = Rows[0] | Rows[1];
       PORTC = Cols[0] & Cols[1] & Cols[2] & Cols[3] & Cols[4] & Cols[5] & Cols[6] & Cols[7];
+      if (rand == 3 && left) {
+         updateScore(score);
+      }
    }
    else if (rand == 4) { //right
       PORTA = Rows[6] | Rows[7];
       PORTC = Cols[0] & Cols[1] & Cols[2] & Cols[3] & Cols[4] & Cols[5] & Cols[6] & Cols[7];
+      if (rand == 4 && right) {
+         updateScore(score);
+      }
    }
-   updateScore(score);
-   return;
+   return score;
 }
 
 int updateScore(int score) {
-   if (rand == 1 && up) {
-      score = score + 100;
-   }
-   else if (rand == 2 && down) {
-      score = score + 100;
-   }
-   else if (rand == 3 && left) {
-      score = score + 100;
-   }
-   else if (rand == 4 && right) {
-      score = score + 100;
-   }
+   score = score + 1;
    return score;
 }
 
@@ -209,6 +210,10 @@ int main(void) {
     DDRB = 0x43; PORTB = 0x9C; // Output: LCD, speaker Input: buttons
     DDRD = 0xFF; PORTD = 0x00; // LCD control lines
     
+    static _task task1, task2;
+    _task *tasks[] = { &task1, &task2 };
+    const unsigned short numTasks = sizeof(tasks)/ sizeof(task*);
+
     TimerOn();
     TimerSet(1000);
     PWM_on();
@@ -216,8 +221,7 @@ int main(void) {
     m_state = WAIT;
 
     while (1) {
-       //PORTA = Rows[0] | Rows[1];
-       //PORTC = Cols[2] & Cols[5];
+       
        menu_tick();
        while (!TimerFlag) {
           TimerFlag = 0;

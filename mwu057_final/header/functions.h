@@ -3,8 +3,8 @@
 
 void startGame();
 int displayHighScore(int score);
-void displayLED();
+int displayLED(int score);
 int displayScore(int score);
 int genRandom();
-int updateScore(int score)
+int updateScore(int score);
 #endif
