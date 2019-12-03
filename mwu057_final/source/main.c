@@ -111,25 +111,7 @@ void startGame() { //starting message
    LCD_DisplayString(1, "up to start");
    LCD_Cursor(17);
    LCD_createChar(0,player1);
-   /*
-   LCD_Cursor(21);
-   LCD_createChar(0, p1);
-   LCD_createChar(1, p2);
-   LCD_createChar(2, p3);
-   LCD_createChar(3, p4);
-   LCD_createChar(4, p5);
-   LCD_createChar(5, p3);
-   LCD_createChar(6, p2);
-   LCD_createChar(7, p6);
    LCD_WriteData(0x00);
-   LCD_WriteData(0x01);
-   LCD_WriteData(0x02);
-   LCD_WriteData(0x04);
-   LCD_WriteData(0x08);
-   LCD_WriteData(0x10);
-   LCD_WriteData(0x20);
-   LCD_WriteData(0x40);
-   */
    return;
 }
 
@@ -244,28 +226,28 @@ void led_tick(int state) {
          PORTA = Rows[0] | Rows[1] | Rows[2] | Rows[3] | Rows[4] | Rows[5] | Rows[6] | Rows[7];
          PORTC = Cols[6] & Cols[7];
          if (up) {
-            updateScore(score);
+            score++;
          }
          break;
       case TWO: //down
          PORTA = Rows[0] | Rows[1] | Rows[2] | Rows[3] | Rows[4] | Rows[5] | Rows[6] | Rows[7];
          PORTC = Cols[0] & Cols[1];
          if (down) {
-            updateScore(score);
+            score++;
          } 
          break;
       case THREE: //left
          PORTA = Rows[0] | Rows[1];
          PORTC = Cols[0] & Cols[1] & Cols[2] & Cols[3] & Cols[4] & Cols[5] & Cols[6] & Cols[7];
          if (left) {
-            updateScore(score);
+            score++;
          }
          break;
       case FOUR: //right
          PORTA = Rows[6] | Rows[7];
          PORTC = Cols[0] & Cols[1] & Cols[2] & Cols[3] & Cols[4] & Cols[5] & Cols[6] & Cols[7];
          if (right) {
-            updateScore(score);
+            score++;
          }
          break;
       case FIN:
@@ -275,12 +257,12 @@ void led_tick(int state) {
          break;
    }
 }
-
+/*
 int updateScore(int score) {
    score = score + 1;
    return score;
 }
-
+*/
 int genRandom() {
    return (rand() % 4) + 1;
 }
@@ -297,7 +279,7 @@ unsigned char EEPROM_Read(unsigned char address) {
 int main(void) {
     DDRA = 0xFF; PORTA = 0x00; // LED Matrix Rows  
     DDRC = 0xFF; PORTC = 0x00; // LED Matrix Cols
-    DDRB = 0x43; PORTB = 0x9C; // Output: LCD, speaker Input: buttons
+    DDRB = 0x43; PORTB = 0x9C; // Output: LCD Input: buttons
     DDRD = 0xFF; PORTD = 0x00; // LCD control lines
      
     static task task1, task2;
@@ -331,7 +313,7 @@ int main(void) {
              tasks[i] -> state = tasks[i] -> TickFct(tasks[i] -> state);
              tasks[i] -> elapsedTime = 0;
           }
-          tasks[i] -> elapsedTime += GCD;
+          tasks[i] -> elapsedTime += 1;
        }
        
        while (!TimerFlag) {
