@@ -2,9 +2,11 @@
 #define __functions_h__
 
 void startGame();
-int displayHighScore(int score);
-int displayLED(int score);
-int displayScore(int score);
+void displayHighScore();
+void displayScore();
 int genRandom();
 int updateScore(int score);
+void EEPROM_Write(unsigned char address, unsigned char data);
+unsigned char EEPROM_Read(unsigned char address);
+
 #endif

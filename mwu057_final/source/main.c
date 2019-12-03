@@ -24,11 +24,9 @@
 #define left (~PINB & 0x10)  // left button
 #define down (~PINB & 0x20)  // down button
 #define right (~PINB & 0x04) // right button
-#define speaker (PINB & 0x40) // speaker
 
 unsigned char gameStatus = 0; // game status
 uint8_t highScore;
-double frequency = 0.00; 
 int score = 0; //score of the game
 
 char Rows[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80}; // LED Matrix
@@ -101,7 +99,6 @@ void menu_tick() {
          displayHighScore(highScore);
          break;
       case RESET:
-         startGame();
          break;
       default:
          break;
@@ -112,6 +109,8 @@ void startGame() { //starting message
    LCD_init();
    LCD_ClearScreen();
    LCD_DisplayString(1, "up to start");
+   LCD_Cursor(17);
+   LCD_createChar(0,player1);
    /*
    LCD_Cursor(21);
    LCD_createChar(0, p1);
@@ -134,28 +133,33 @@ void startGame() { //starting message
    return;
 }
 
-int displayScore(int score) {
+void displayScore() {
    LCD_init();
    LCD_ClearScreen();
    LCD_DisplayString(1, "score: ");
    LCD_Cursor(7);
    updateScore(score);
    LCD_WriteData(score + '0');
-   return score;
 }
 
-int displayHighScore(int score) {
+void displayHighScore() {
    LCD_init();
    LCD_ClearScreen();
    LCD_DisplayString(1, "highscore: ");
    LCD_Cursor(11);
-   LCD_WriteData(highScore); //LCD_WriteData
-   return score;
+   if (score > EEPROM_Read(0xFF)) {
+      EEPROM_Write(0xFF, score);
+     highScore = score;
+   }
+   else {
+     highScore = eeprom_read_byte((uint8_t*)20);
+   }
+   LCD_WriteData(highScore);
 }
-//enum LED_STATES = { WAITBUT, INIT, 1, 2, 3, 4, FIN };
+//enum LED_STATES = { WAITBUT,RELBUT, INIT, 1, 2, 3, 4, FIN };
 
 void led_tick(int state) {
-   unsigned char random = 0;
+   int random = 0;
    switch(state) { //led transitions
       case WAITBUT:
          if (up && !down && !right && !left) {
@@ -179,7 +183,7 @@ void led_tick(int state) {
             state = FIN;
          }
          else {
-            state = random;
+            state = INIT;
          }
          break;
       case ONE:      //up
@@ -226,7 +230,7 @@ void led_tick(int state) {
          state = WAITBUT;
          break;
    }
-   switch(state) {
+   switch(state) {       //LED ACTIONS
       case WAITBUT:
          PORTA = 0x00;
          PORTC = 0x00;
@@ -234,6 +238,7 @@ void led_tick(int state) {
       case RELBUT:
          break;
       case INIT:
+         //random = genRandom();
          break;
       case ONE: //up
          PORTA = Rows[0] | Rows[1] | Rows[2] | Rows[3] | Rows[4] | Rows[5] | Rows[6] | Rows[7];
@@ -280,51 +285,55 @@ int genRandom() {
    return (rand() % 4) + 1;
 }
 
+void EEPROM_Write(unsigned char address, unsigned char data) {
+   eeprom_write_byte(address, data);
+}
 
+unsigned char EEPROM_Read(unsigned char address) {
+   return eeprom_read_byte(address);
+}
 
 
 int main(void) {
-    /* Insert DDR and PORT initializations */
     DDRA = 0xFF; PORTA = 0x00; // LED Matrix Rows  
     DDRC = 0xFF; PORTC = 0x00; // LED Matrix Cols
     DDRB = 0x43; PORTB = 0x9C; // Output: LCD, speaker Input: buttons
     DDRD = 0xFF; PORTD = 0x00; // LCD control lines
-    /* 
-    static _task task1, task2;
-    _task *tasks[] = { &task1, &task2 };
+     
+    static task task1, task2;
+    task *tasks[] = { &task1, &task2 };
     const unsigned short numTasks = sizeof(tasks)/ sizeof(task*);
-    */
+    unsigned char i;
+    unsigned long GCD = tasks[0] -> period;
+    for (i = 1; i < numTasks; i++) {
+       GCD = findGCD(GCD,tasks[i]->period);
+    }
+
+    task1.state = WAIT; //menu
+    task1.period = 100;
+    task1.elapsedTime = task1.period;
+    task1.TickFct = & menu_tick;
+
+    task2.state = WAITBUT; //LED
+    task2.period = 500;
+    task2.elapsedTime = task2.period;
+    task2.TickFct = & led_tick;
+    
+    
+    TimerSet(GCD);
     TimerOn();
-    TimerSet(1000);
-    //startGame();
-    //m_state = WAIT;
-    //state = WAITBUT;
-    LCD_Cursor(21);
-    LCD_createChar(0,player1);
-    LCD_WriteData(0x00);
-   /* LCD_createChar(0, p1);
-    LCD_createChar(1, p2);
-    LCD_createChar(2, p3);
-    LCD_createChar(3, p4);
-    LCD_createChar(4, p5);
-    LCD_createChar(5, p3);
-    LCD_createChar(6, p2);
-    LCD_createChar(7, p6);
-    LCD_WriteData(0x00);
-    LCD_WriteData(0x01);
-    LCD_WriteData(0x02);
-    LCD_WriteData(0x04);
-    LCD_WriteData(0x08);
-    LCD_WriteData(0x10);
-    LCD_WriteData(0x20);
-    LCD_WriteData(0x40);
-   */
     while (1) {       
-       //menu_tick(m_state);
-       //led_tick(state);
-       LCD_Cursor(21);
-       LCD_createChar(0,player1);
-       LCD_WriteData(0x00);
+       menu_tick(m_state);
+       led_tick(state);
+       
+       for (i = 0; i < numTasks; i++) {
+          if(tasks[i] -> elapsedTime == tasks[i] -> period) {
+             tasks[i] -> state = tasks[i] -> TickFct(tasks[i] -> state);
+             tasks[i] -> elapsedTime = 0;
+          }
+          tasks[i] -> elapsedTime += GCD;
+       }
+       
        while (!TimerFlag) {
           TimerFlag = 0;
        }
