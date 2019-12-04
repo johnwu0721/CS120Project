@@ -1,24 +1,13 @@
-/*	Author: mwu057
- *  Partner(s) Name: 
- *	Lab Section:
- *	Assignment: Lab #  Exercise #
- *	Exercise Description: [optional - include for your own benefit]
- *
- *	I acknowledge all content contained herein, excluding template or example
- *	code, is my own original work.
- */
 #include <avr/io.h>
-#ifdef _SIMULATE_
-#include "simAVRHeader.h"
-#include <avr/eeprom.h>
-#include "io.c"
+#include "eeprom.h"
+#include "io.h"
 #include "functions.h"
 #include <avr/interrupt.h>
 #include <stdlib.h>
 #include "timer.h"
 #include "scheduler.h"
 #include <util/delay.h>
-#endif
+#include "constants.h"
 
 #define up (~PINB & 0x08)    // up button
 #define left (~PINB & 0x10)  // left button
@@ -29,6 +18,8 @@ unsigned char gameStatus = 0; // game status  0 in game 1 end game
 uint8_t highScore;
 int score = 0; //score of the game
 int LEDrandom = 0; //random sequence of LED
+int counter = 0;
+int num; 
 
 char Rows[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80}; // LED Matrix
 char Cols[] = {0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xDF, 0xBF, 0x7F}; // LED Matrix
@@ -58,7 +49,7 @@ void menu_tick() {
          if (up && down && left && right) { //reset
             m_state = RESET;
          }
-         else if (gameStatus) {
+         if (gameStatus == 1) {
             m_state = END;
          }
          else {
@@ -69,7 +60,7 @@ void menu_tick() {
          if (up && down && left && right) { //reset
             m_state = RESET;
          }
-         else if (gameStatus) {
+         if (gameStatus == 1) {
             m_state = END;
          }
          else {
@@ -130,10 +121,13 @@ void startGame() { //starting message
    LCD_createChar(7,p6);
    LCD_Cursor(24);
    LCD_WriteData(0x07);
+   EEPROM_write(0,5);
+   num = EEPROM_read(0);
+   LCD_Cursor(26);
+   LCD_WriteData(num + '0');
 }
 
 void displayScore() {
-   LCD_init();
    LCD_ClearScreen();
    LCD_DisplayString(1, "score: ");
    LCD_Cursor(7);
@@ -141,16 +135,15 @@ void displayScore() {
 }
 
 void displayHighScore() {
-   LCD_init();
    LCD_ClearScreen();
    LCD_DisplayString(1, "highscore: ");
    LCD_Cursor(11);
-   highScore = eeprom_read_byte((uint8_t*)20);
+   highScore = EEPROM_read(20);;
    if (score > highScore) {
-     eeprom_write_byte((uint8_t*)20, score); 
+     EEPROM_write(20, score); 
    }
    else {
-     highScore = eeprom_read_byte((uint8_t*)20);
+     highScore = EEPROM_read(20);
    }
    LCD_WriteData(highScore + '0');
 }
@@ -187,10 +180,6 @@ void led_tick() {
          if (up && down && right && left) {
             state = WAITBUT;
          }
-         else if (up) {
-            score = score + 1;
-            state = INIT;
-         }
          else {
             state = INIT;
          }
@@ -198,10 +187,6 @@ void led_tick() {
       case TWO:      //down
          if (up && down && left && right) {
             state = WAITBUT;
-         }
-         else if (down) {
-            score = score + 1;
-            state = INIT;
          }
          else {
             state = INIT;
@@ -211,10 +196,6 @@ void led_tick() {
          if (up && down && left && right) {
             state = WAITBUT;
          }
-         else if (left) {
-            score = score + 1;
-            state = INIT;
-         }
          else {
             state = INIT;
          }
@@ -222,10 +203,6 @@ void led_tick() {
       case FOUR:      //right
          if (up && down && left && right) {
             state = WAITBUT;
-         }
-         else if (right) {
-            score = score + 1;
-            state = INIT;
          }
          else {
             state = INIT;
@@ -251,26 +228,39 @@ void led_tick() {
       case RELBUT:
          break;
       case INIT:
-         //random = genRandom();
+         if (counter >= 30) {
+            gameStatus = 1;
+         }
          break;
       case ONE: //up
          PORTA = Rows[0] | Rows[1] | Rows[2] | Rows[3] | Rows[4] | Rows[5] | Rows[6] | Rows[7];
          PORTC = Cols[6] & Cols[7];
+         counter++;
+         _delay_ms(1000);
          break;
       case TWO: //down
          PORTA = Rows[0] | Rows[1] | Rows[2] | Rows[3] | Rows[4] | Rows[5] | Rows[6] | Rows[7];
          PORTC = Cols[0] & Cols[1];
+         counter++;
+         _delay_ms(1000);
          break;
       case THREE: //left
          PORTA = Rows[0] | Rows[1];
          PORTC = Cols[0] & Cols[1] & Cols[2] & Cols[3] & Cols[4] & Cols[5] & Cols[6] & Cols[7];
+         counter++;
+         _delay_ms(1000);
          break;
       case FOUR: //right
          PORTA = Rows[6] | Rows[7];
          PORTC = Cols[0] & Cols[1] & Cols[2] & Cols[3] & Cols[4] & Cols[5] & Cols[6] & Cols[7];
+         counter++;
+         _delay_ms(1000);
          break;
       case FIN:
-         displayHighScore(score);
+         displayHighScore();
+         counter = 0;
+         _delay_ms(10000);
+         gameStatus = 0;
          break;
       default:
          PORTA = 0x00;
@@ -281,22 +271,15 @@ void led_tick() {
 
 
 int genRandom() {
-   return (rand() % 4) + 1;
+   return (rand() % 4) + 3;
 }
 
-void EEPROM_Write(unsigned char address, unsigned char data) {
-   eeprom_write_byte(address, data);
-}
-
-unsigned char EEPROM_Read(unsigned char address) {
-   return eeprom_read_byte(address);
-}
 
 
 int main(void) {
     DDRA = 0xFF; PORTA = 0x00; // LED Matrix Rows  
     DDRC = 0xFF; PORTC = 0x00; // LED Matrix Cols
-    DDRB = 0x43; PORTB = 0x9C; // Output: LCD Input: buttons
+    DDRB = 0xC3; PORTB = 0x3C; // Output: LCD Input: buttons
     DDRD = 0xFF; PORTD = 0x00; // LCD control lines
      
     static task task1, task2;
@@ -319,7 +302,7 @@ int main(void) {
     task2.TickFct = &led_tick;
     
     
-    TimerSet(100);
+    TimerSet(GCD);
     TimerOn();
     while (1) {       
        if (gameStatus == 1) {
@@ -327,21 +310,21 @@ int main(void) {
           PORTC = 0x00;
           displayHighScore();
        }
-       else if (gameStatus == 0) {
-          menu_tick();
-          led_tick();
-       }
-       for (i = 0; i < numTasks; i++) {
-          if(tasks[i] -> elapsedTime == tasks[i] -> period) {
-             tasks[i] -> state = tasks[i] -> TickFct(tasks[i] -> state);
-             tasks[i] -> elapsedTime = 0;
+       if (gameStatus == 0) {
+          for (i = 0; i < numTasks; i++) {
+             if(tasks[i] -> elapsedTime == tasks[i] -> period) {
+                tasks[i] -> state = tasks[i] -> TickFct(tasks[i] -> state);
+                tasks[i] -> elapsedTime = 0;
+             }
+             tasks[i] -> elapsedTime += GCD;
           }
-          tasks[i] -> elapsedTime += GCD;
        }
-       while (!TimerFlag) {
+       while (!TimerFlag);
           TimerFlag = 0;
-       }
+       
     }
 
     return 0;
 }
+
+
