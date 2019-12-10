@@ -125,10 +125,10 @@ void startGame() { //starting message
    LCD_createChar(7,p6);
    LCD_Cursor(24);
    LCD_WriteData(0x07);
-   //EEPROM_write(0,5);
-   //num = EEPROM_read(0);
-   //LCD_Cursor(26);
-   //LCD_WriteData(num + '0');
+   EEPROM_write(0,5);
+   num = EEPROM_read(0);
+   LCD_Cursor(26);
+   LCD_WriteData(num + '0');
 }
 
 void displayScore() {
